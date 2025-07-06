@@ -1,0 +1,449 @@
+{
+  "name": "YouTube Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/pintostudio~youtube-transcript-scraper/run-sync-get-dataset-items?token=[API_KEY_REMOVED]",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"videoUrl\": \"{{ $json['Full URL'] }}\"\n}",
+        "options": {}
+      },
+      "id": "9b7ba6e4-7fe8-4da0-8879-fc0d88faf1ca",
+      "name": "Request YouTube Transcript",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -580,
+        -40
+      ],
+      "typeVersion": 4.2,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "Provide the YouTube URL. You can later create a Scheduler or Webhook.",
+        "height": 80,
+        "width": 230
+      },
+      "id": "e2ef667a-8c06-4601-becf-659264055d72",
+      "name": "Sticky Note9",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -540,
+        180
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Once you follow the Setup Instructions (mentioned in the template page description), you can insert the full URL endpoint, which includes both the POST Endpoint and API Key.",
+        "height": 420,
+        "color": 3
+      },
+      "id": "1f750551-f038-4072-84c5-ef56be608965",
+      "name": "Sticky Note10",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -240,
+        180
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "You use code to actually clean the transcript. This can reduce token usage by 60% and up to 70% in some cases.",
+        "height": 360,
+        "width": 260,
+        "color": 5
+      },
+      "id": "9811fea8-0b67-4be9-9e22-f8b1de4cf6ac",
+      "name": "Sticky Note12",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        60,
+        180
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08TE1J4PSM",
+          "mode": "list",
+          "cachedResultName": "context-generator"
+        },
+        "text": "={{ $json.message.content }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        780,
+        360
+      ],
+      "id": "b9ce7c38-e859-4ad6-94c7-10cbc4edd594",
+      "name": "Slack",
+      "webhookId": "[WEBHOOK_ID_REMOVED]"
+    },
+    {
+      "parameters": {
+        "jsCode": "/****\n * Clean transcript and extract channel/publish info\n */\nconst inputJson = $input.first().json;\nlet transcriptData = inputJson.data;\nif (!Array.isArray(transcriptData)) {\n  transcriptData = [];\n}\n\nconst channelName = inputJson.channelName || 'Unknown Channel';\nconst publishDate = inputJson.publishDate || inputJson.publishedAt || 'Unknown Date';\n\nconst cleanedTranscript = transcriptData\n  .filter(segment => segment.text)\n  .map(segment => segment.text)\n  .join(' ');\n\nreturn {\n  json: {\n    fullTranscript: cleanedTranscript,\n    channelName: channelName,\n    publishDate: publishDate\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -40
+      ],
+      "id": "16fcc5bb-4bc1-4bfd-aa30-66e4f04b68f6",
+      "name": "Clean Transcript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.fullTranscript }}"
+            },
+            {
+              "content": "# System Prompt: AI Content Strategist & Summarizer\n\nYou are an expert content strategist and editor. Your task is to transform a raw, unstructured video transcript into a concise, insightful, and highly readable summary formatted in Markdown.\n\n## Primary Goal\n\nYour primary goal is to extract the core message, key takeaways, and overall sentiment of the provided text, and present it in a format that is easy to digest for a busy professional.\n\n## Input\n\nYou will receive a single block of plain text, which is the cleaned transcript from a video.\n\n## Task & Formatting Instructions\n\nAnalyze the provided transcript and generate a summary that adheres strictly to the following Markdown format. Do not add any conversational text or pre-amble.\n\n### Title:\nCreate a compelling, SEO-friendly title that captures the main topic of the video.\n\n*(Example:*\n```markdown\n### **Title:** How to Master AI Prompts in Two Simple Steps\n```*)*\n\n### One-Sentence Summary:\nDistill the entire video's message into a single, powerful \"hook\" sentence.\n\n*(Example:*\n```markdown\n### **One-Sentence Summary:** The key to unlocking an AI's potential is not in rushing the context, but in patiently providing the right information upfront.\n```*)*\n\n### Key Takeaways:\nIdentify the 3-5 most critical points, arguments, or actionable tips from the transcript. Present these as a bulleted list. Each bullet point should be a complete, concise sentence.\n\n*(Example:*\n```markdown\n### Key Takeaways:\n- Most users fail by rushing the AI and not providing sufficient context to solve the problem.\n- Hands-on experimentation (\"getting your hands dirty\") is the only reliable way to understand what truly works with AI.\n- Automation can empower solo entrepreneurs to perform the work of entire teams, bridging the gap with larger, better-resourced companies.\n```*)*\n\n### Concluding Thought:\nWrite a short, concluding paragraph (2-3 sentences) that encapsulates the overarching theme or the final \"so what?\" of the video content.\n\n*(Example:*\n```markdown\n### **Concluding Thought:** This transcript highlights a major shift in productivity, where slowing down to be more deliberate with AI inputs ultimately accelerates results. It's a call for entrepreneurs to move beyond simple task automation and begin building comprehensive, intelligent systems.\n```*)*\n\n## Final Output Structure\n\nYour final response must be a single block of Markdown text, following the exact structure and formatting detailed above.",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        720,
+        140
+      ],
+      "id": "3f9898c8-5dda-49be-ac60-5d5d0cc2e82c",
+      "name": "OpenAI"
+    },
+    {
+      "parameters": {
+        "content": "Now we analyze the transcript and provide the analysis in markdown format.",
+        "height": 360,
+        "width": 320,
+        "color": 4
+      },
+      "id": "53714d3d-83fd-4c57-a42c-02c9d92c9a32",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        340,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        -280
+      ],
+      "id": "1472e0a2-061f-4a1c-b884-fa870374fa9b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "options": {},
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "id",
+              "value": "={{$json[\"videoId\"]}}"
+            },
+            {
+              "name": "key",
+              "value": "[API_KEY_REMOVED]"
+            }
+          ]
+        }
+      },
+      "name": "Fetch_Youtube_Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -280
+      ],
+      "id": "ee9d5c5e-3954-4001-bf6a-ecaf3f42a050"
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "const snippet = $json.items[0].snippet;\nreturn [{\n  json: {\n    videoId: $json.items[0].id,\n    channelName: snippet.channelTitle,\n    publishDate: snippet.publishedAt,\n    fullUrl: `https://www.youtube.com/watch?v=${$json.items[0].id}`\n  }\n}];"
+      },
+      "name": "Extract_Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -280
+      ],
+      "id": "7090f0c4-4f81-4819-9082-51b314e842e0"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "Full URL",
+              "value": "https://www.youtube.com/watch?v=W_y-y9HUeIg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Test YouTube URL1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -860,
+        -280
+      ],
+      "id": "752a847e-6349-45d2-abc5-1f322375d418"
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "const url = $json['Full URL'];\nconst videoId = url.split('v=')[1].split('&')[0];\nreturn [{ json: { ...$json, videoId } }];"
+      },
+      "name": "Get_Video_Info1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        -280
+      ],
+      "id": "354aaa81-3935-49f0-b24b-1615cc31b49a"
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "// Get both inputs\nconst metadata = $input.all()[0].json;\nconst transcript = $input.all()[1].json;\n\n// Return merged single output\nreturn [\n  {\n    json: {\n      videoId: metadata.videoId || 'Unknown VideoId',\n      channelName: metadata.channelName || 'Unknown Channel',\n      publishDate: metadata.publishDate || 'Unknown Date',\n      fullUrl: metadata.fullUrl || '',\n      fullTranscript: transcript.fullTranscript || ''\n    }\n  }\n];"
+      },
+      "name": "Merge_Transcript_Info1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        40,
+        -240
+      ],
+      "id": "6e1ae998-7b74-4b10-83b5-45b2d1a33100"
+    },
+    {
+      "parameters": {
+        "language": "JavaScript",
+        "jsCode": "const data = $json.transcript.data || $json.transcript;\nconst cleanedTranscript = Array.isArray(data) ? data.map(s => s.text).join(' ') : '';\n\nreturn [{\n  json: {\n    videoId: $json.videoId,\n    channelName: $json.channelName,\n    publishDate: $json.publishDate,\n    fullUrl: $json.fullUrl,\n    fullTranscript: cleanedTranscript\n  }\n}];"
+      },
+      "name": "Clean Transcript1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -240
+      ],
+      "id": "c81e2265-990b-417d-81bf-41be028e5c1d"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -40,
+        -620
+      ],
+      "id": "af629e46-ba62-4242-be13-ff61c69cc7ce",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        620,
+        -240
+      ],
+      "id": "06e83e5e-a05c-4b2d-9872-d8352f3a839d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        -40
+      ],
+      "id": "d93a200f-ddd7-4898-8547-5c706c58156e",
+      "name": "OpenAI Chat Model"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Request YouTube Transcript": {
+      "main": [
+        [
+          {
+            "node": "Clean Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Transcript": {
+      "main": [
+        [
+          {
+            "node": "Merge_Transcript_Info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        []
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set Test YouTube URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch_Youtube_Metadata": {
+      "main": [
+        [
+          {
+            "node": "Extract_Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_Metadata": {
+      "main": [
+        [
+          {
+            "node": "Merge_Transcript_Info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Test YouTube URL1": {
+      "main": [
+        [
+          {
+            "node": "Get_Video_Info1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Request YouTube Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Video_Info1": {
+      "main": [
+        [
+          {
+            "node": "Fetch_Youtube_Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_Transcript_Info1": {
+      "main": [
+        [
+          {
+            "node": "Clean Transcript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        []
+      ]
+    },
+    "Clean Transcript1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a16ee4d5-f1cc-41d8-9b5c-e3dd80e09c98",
+  "meta": {
+    "instanceId": "[INSTANCE_ID_REMOVED]"
+  },
+  "id": "gJ89yh6JisVr7TKi",
+  "tags": []
+}
